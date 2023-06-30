@@ -35,6 +35,18 @@ import scipy.spatial
 from torch_scatter import scatter_add
 from cross_attn import CrossAttention
 
+
+#
+#    Center = T.Center():
+#        creates a transformed instance of Center to center the node position data.
+#    Normalscale = T.NormalizeScale():
+#        Creates a Normalscale transformation instance to normalize the scale of the node position data.
+#    Delaunay = T.Delaunay():
+#        Creates a transformed instance of Delaunay to generate triangulated face index data.
+#    Normal = T.GenerateMeshNormals():
+#        Creates a transformed instance of Normal that generates the normal vector data of the mesh.
+#
+
 Center = T.Center()
 Normalscale = T.NormalizeScale()
 Delaunay = T.Delaunay()
@@ -52,8 +64,30 @@ def normalize_point_pos(pos):
     # pos_B = pos_B * scale_B
     return pos
 
-
+# load data
 def load_data(data_path):
+    """
+    S, A   :Length of      Amino acids, atom
+    x0 = data.x
+        dimension   A*59(20+39)  pssm + Atomic Properties
+    pos = data.pos
+        dimension   A*3 x,y,z
+    batch = data.batch
+        batch index for PointTransformerConv1
+    normal = data.norm
+        generate normal information for point transformer
+    pool_batch = data.aa
+        for pooling index for Amino acids
+    aa_num = data.num
+        len(aa_y)
+    mask = data.mask
+        is surface or not
+    esm_list = data.esm_list
+        esm feature dimension S*1280
+    aa_y = data.aa_y
+        label
+    """
+
     print('loading data')
     data_list = []
 
@@ -71,8 +105,8 @@ def load_data(data_path):
             aa_y = []
             mask = []
 
-            # print(count)
-            fr = open('/users/PCON0022/yuy702/zy/esm/esm_result/724_' + str(count) + '.txt', 'r')
+            # name rules:  datasetnum_count
+            fr = open('./esm_result/724_' + str(count) + '.txt', 'r')
             li = fr.readlines()
             esm_list = [[] * num for num in range(len(li))]
             for x in range(len(li)):
@@ -121,101 +155,21 @@ def load_data(data_path):
             data.num = number
             data.mask = mask
             data.esm_list = esm_list
-
+            #data = Center(data):
+            #apply a centering transformation to the data data, i.e., center the node location data
+            #data = Delaunay(data):
+            #applies a triangulation transformation to the data data, i.e., generates triangulated face index data.
+            #data = Normal(data):
+            #apply the normal generation transformation to the data data, i.e., generate the normal vector data of the grid.
             data = Center(data)
             # data = Normalscale(data)
             data = Delaunay(data)
             data = Normal(data)
-
             data = data.to(device)
-            # if count == 289:
-            #     count += 1
-            #     continue
             data_list.append(data)
             count += 1
     # print(data_list)
     # torch.save(data_list, '724_dataset.pt')
-    return data_list
-
-
-def load_InDdata(data_path, datasetnum):
-    print('loading data')
-    data_list = []
-
-    # pass_list = [16,25,26,31,32,39]
-    with open(data_path, 'r') as f:
-        n_g = int(f.readline().strip())
-        num = 0
-        count = 0
-        for i in range(n_g):  # for each protein
-            # if count in pass_list:
-            #     continue
-            n = int(f.readline().strip())  # atom number
-            point_tag = []
-            point_fea_pssm = []
-            point_pos = []
-            point_aa = []
-            point_esm = []
-            aa_y = []
-            mask = []
-            # print(count)
-            fr = open('./esm_result/' + str(datasetnum) + '_' + str(count) + '.txt', 'r')
-            li = fr.readlines()
-            esm_list = [[] * num for num in range(len(li))]
-            for x in range(len(li)):
-                new_list = li[x].split()
-                for y in range(len(new_list)):
-                    esm_list[x].append(float(new_list[y]))
-
-            esm_list = torch.tensor(esm_list, dtype=torch.float)
-            for j in range(n):
-                row = f.readline().strip().split()
-                point_tag.append(int(row[1]))
-                mask.append(int(row[2]))
-                pos, fea_pssm = np.array([float(w) for w in row[3:6]]), np.array([float(w) for w in row[6:]])
-                point_pos.append(pos)
-                point_fea_pssm.append(fea_pssm)
-                point_aa.append(int(row[0]))
-
-            flag = -1
-            for i in range(len(point_aa)):
-                if (flag != point_aa[i]):
-                    flag = point_aa[i]
-                    aa_y.append(point_tag[i])
-            # print(aa_y)
-            x = torch.tensor(point_fea_pssm, dtype=torch.float)  # 39
-            y = torch.tensor(point_tag)
-            pos = torch.tensor(point_pos, dtype=torch.float)  # 3
-            mask = torch.tensor(mask)
-
-            fea_esm = torch.tensor(point_esm, dtype=torch.float)
-
-            # pos=normalize_point_pos(pos)
-            data = Data(x=x, y=y, pos=pos)
-            # print(data.norm)
-
-            for i in range(len(point_aa)):
-                point_aa[i] = point_aa[i] + num
-            num = num + len(aa_y)
-
-            aa = torch.tensor(point_aa)
-            # print(aa)
-            number = len(aa_y)
-            aa_y = torch.tensor(aa_y)
-
-            data.aa = aa
-            data.aa_y = aa_y
-            data.num = number
-            data.mask = mask
-            data.esm_list = esm_list
-            data = Center(data)
-            # data = Normalscale(data)
-            data = Delaunay(data)
-            data = Normal(data)
-            data = data.to(device)
-            data_list.append(data)
-            count += 1
-    # torch.save(data_list, '' + str(datasetnum) + '_dataset.pt')
     return data_list
 
 
@@ -239,7 +193,7 @@ def MLP(channels):
 #         Seq(BN(channels), ReLU())
 #     ])
 
-
+# generate Normal information
 def generate_normal(pos, batch):
     data_norm = []
     batch_list = torch.unique(batch)
@@ -283,7 +237,7 @@ def generate_normal(pos, batch):
 #         # x = self.conv(x, pos, normal, edge_index)
 #         return x
 
-
+# PointTransformer
 class PointTransformerConv1(torch.nn.Module):
     def __init__(self, r, in_channels, out_channels):
         super(PointTransformerConv1, self).__init__()
@@ -305,17 +259,52 @@ class PointTransformerConv1(torch.nn.Module):
         return x
 
 
+
 class Net(torch.nn.Module):
     def __init__(self, out_channels=1):
+        """
+            1.  conv1,conv2,conv3:
+                PointTransformerConv Convolution on Atomic Level(point cloud data radius:5 ,8.5 ,10)
+                dimension conv1 59 -> 128
+                          conv2 59 -> 128
+                          conv3 59 -> 128
+            2.  neck:
+                CONCATENATE tensor from point cloud layer
+                dimension neck 128+128+128 -> 1280
+            3.  conv5
+                PointTransformerConv Convolution on amino acid level (point cloud data radius: 15).
+                dimension conv1 1280 -> 1280
+            4.  neck_esm
+                CONCATENATE tensor from esm and 2.
+                dimension neck_esm 1280+1280 -> 1280
+            5.  crossattention
+                Cross attention  allows the model to take into account
+                the correlation between different inputs or outputs while calculating the attention weights
+                This can interact and calculate attention weights for esm and 2.
+                two different input sequences simultaneously.
+                dimension CrossAttention 1280+1280 -> 1280
+            6.  mlp_esm
+                we now use mlp_esm to add tensor from esm and 3.
+                then the summed tensor is dimensioned down to 1
+                dimension mlp_esm 1280 -> 1
+            7.  mlp_only
+                mlp only for esm tensor
+                dimension mlp_only 1280 -> 2
+            output  score
+            out = mlp_esm + mlp_only[:, 1].unsqueeze(1)
+        """
         super().__init__()
+        #   Convolution operation on point cloud data radius:5 ,8.5 ,10
         self.conv1 = PointTransformerConv1(5, in_channels=59, out_channels=128)
         self.conv2 = PointTransformerConv1(8.5, in_channels=59, out_channels=128)
         self.conv3 = PointTransformerConv1(10, in_channels=59, out_channels=128)
         # self.conv4 = PointTransformerConv1(20, in_channels=39 + 20, out_channels=128)
-
+        #   CONCATENATE tensor from point cloud layer
         # self.neck = Seq(Lin(128 + 128 + 128 , 512), BN(512), ReLU(), Dropout(0.3))
         self.neck = Seq(Lin(128 + 128 + 128, 1280), LN(1280), GELU())
+
         self.neck_esm = Seq(Lin(1280 + 1280, 1280), LN(1280), GELU())
+        # dim = output dim
         self.crossattention = CrossAttention(dim= 1280)
         # self.conv5 = PointTransformerConv1(15, in_channels=512, out_channels=512)
         self.conv5 = PointTransformerConv1(15, in_channels=1280, out_channels=1280)
@@ -401,7 +390,7 @@ class Net(torch.nn.Module):
             data.label = data.aa_y[mask]
         return out
 
-
+# loss
 class FocalLoss(nn.Module):
     def __init__(self, alpha=.25, gamma=2):
         super(FocalLoss, self).__init__()
@@ -417,7 +406,7 @@ class FocalLoss(nn.Module):
         # return F_loss.mean()
         return BCE_loss.mean()
 
-
+# train function
 def train_model(model, patience, n_epochs, checkpoint, p_weight):
     train_losses = []
     valid_losses = []
@@ -430,7 +419,6 @@ def train_model(model, patience, n_epochs, checkpoint, p_weight):
     # pos_weight = torch.FloatTensor([10.0]).to(device)
 
     for epoch in range(1, n_epochs + 1):
-
         model.train()
         for data in trainloader:
             data = data.to(device)
@@ -496,9 +484,8 @@ def train_model(model, patience, n_epochs, checkpoint, p_weight):
     return avg_train_losses, avg_valid_losses
 
 
+# load_data : first run save dataset
 # dataset = load_data('/users/PCON0022/yuy702/zy/old_data_feature_surface724.txt')
-# InDdataset = load_InDdata('/users/PCON0022/yuy702/zjl/esm/64_data_feature_surface.txt',64)
-# InDdataset = load_InDdata('/users/PCON0022/yuy702/zy/esm/272_feature.txt', 272)
 dataset = torch.load('./724_dataset.pt')
 InDdataset = torch.load('./272_dataset.pt')
 train, val, test = dataset[: 505], dataset[505: 608], dataset[608:]
