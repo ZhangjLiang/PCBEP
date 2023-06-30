@@ -1,0 +1,22 @@
+1IFH	P	,	L	|	H	
+1JTO	L	,	A	B	
+1JTP	L	,	A	B	
+1JTT	L	,	A	
+1G7H	C	,	A	|	B	
+1G7I	C	,	A	|	B	
+1G7J	C	,	A	|	B	
+1G7L	C	,	A	|	B	
+1G7M	C	,	A	|	B	
+5SV3	B	,	A	C	
+5VCO	E	,	A	C	|	B	D	
+1NMB	N	,	L	|	H	
+1KIP	C	,	A	|	B	
+1KIQ	C	,	A	|	B	
+1KIR	C	,	A	|	B	
+1IC4	Y	,	L	|	H	
+1IC5	Y	,	L	|	H	
+1IC7	Y	,	L	|	H	
+1XGP	C	,	A	|	B	
+1XGQ	C	,	A	|	B	
+1XGR	C	,	A	|	B	
+1XGT	C	,	A	|	B	
