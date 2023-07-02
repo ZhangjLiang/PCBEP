@@ -29,7 +29,9 @@ for i in range(0,5):
     ap, auc = ap_auc('272_ln2_result_(' + str(i) + ').txt')
     print(ap,auc)
 
-"""E:\Anaconda3\envs\bcell\python.exe E:\1Code\PCBEP\result\get_apauc.py 
+"""
+
+Cross attention
 0.2272928911736107 0.7109022989746356
 0.21657507340284282 0.7092255657492355
 0.19484537370630828 0.6966613707501349
