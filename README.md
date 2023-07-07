@@ -9,7 +9,9 @@ If you only want to train your model with data sets, then you don't need to inst
 
 ## esm
 ###  Evolutionary Scale Modeling
-``link: https://github.com/facebookresearch/esm```
+```
+link: https://github.com/facebookresearch/esm
+```
 As a prerequisite, you must have PyTorch installed to use this repository.
 You can use this one-liner for installation, using the latest release of esm:
 ```
