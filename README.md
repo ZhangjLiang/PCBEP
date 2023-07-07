@@ -3,6 +3,4 @@ PCBEP is a B cell epitope predict tool which is based on esm-2 model and feature
 ## dataset 
 
 ## train model
-`<
-python train.py
->`
+`<python train.py>`
